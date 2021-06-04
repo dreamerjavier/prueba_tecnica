@@ -16,29 +16,18 @@ class Relacion extends Globals
     public $dimensionalElements = [];
     public $flatElements = [];
 
-    public function getPackageRelation($packageName = null)
-    {
-        /* if (is_null($packageName))
-            return ["code" => "error", "message" => "El nombre del paquete está vacío"]; */
-        $treeArray = $this->createTree();
-        return $treeArray;
-    }
-
-    public function createTree(string $directory = null)
+    function createTree(string $directory = null)
     {
         $arrayResponse = [];
 
-        $descendantTree = [];
-        $ascendantTree = [];
-
         // Lectura de repositorios
-        $globals = new Globals;
         $directory = is_null($directory) ? $this->getRepoDir() : $directory;
         if (is_dir($this->getRepoDir())) {
             $scanResult = scandir($this->getRepoDir());
             if (!empty($scanResult)) {
                 foreach ($scanResult as $result) {
                     if (!pathinfo($result, PATHINFO_EXTENSION)) {
+
                         // Búsqueda de composers
                         $directoryIteration = new DirectoryIterator($this->getRepoDir() . "/" . $result);
                         if (!empty($directoryIteration)) {
@@ -54,14 +43,21 @@ class Relacion extends Globals
                 }
             }
 
+            //Evaluamos si ha conseguido los composers
             if (!empty($this->composerList)) {
                 foreach ($this->composerList as $composer) {
+                    // Utilizamos la lista flat para tener todos los elementos en una lista lineal para poder comparar más tarde
                     $this->flatElements[] = ["name" => $composer["name"], "child" => array_keys($composer["require"])];
-                    $this->dimensionalElements[] = ["name" => $composer["name"], "child" => $this->buildTree($composer)];
+
+                    //Aquí se crea el árbol de dependencias
+                    $this->dimensionalElements[] = ["name" => $composer["name"], "child" => $this->createBranch($composer)];
                 }
+
 
                 foreach ($this->flatElements as $key => $flatElement) {
                     foreach ($this->flatElements as $toCompareFlat) {
+
+                        //Evaluamos si tiene padres
                         if (in_array($flatElement["name"], $toCompareFlat["child"])) {
                             if (!in_array($toCompareFlat["name"], $this->flatElements[$key]["parents"]) and $toCompareFlat["name"] != $flatElement["name"]) {
                                 $this->flatElements[$key]["parents"][] = $toCompareFlat["name"];
@@ -76,19 +72,23 @@ class Relacion extends Globals
                 }
 
                 foreach ($this->flatElements as $element) {
+                    //Creamos una lista con los elementos que no son padres principales
                     if (isset($element["parents"])) {
                         $nonMainParentItems[] = $element["name"];
                     }
                 }
 
+
                 foreach ($this->dimensionalElements as $key => $element) {
+
+                    //Limpiamos la lista del árbol principal
                     if (in_array($element["name"], $nonMainParentItems)) {
                         unset($this->dimensionalElements[$key]);
                     }
                 }
 
                 if (!empty($this->dimensionalElements)) {
-                    $arrayResponse = $this->dimensionalElements;
+                    $arrayResponse = $this->flatElements;
                 }
             }
         }
@@ -97,24 +97,71 @@ class Relacion extends Globals
         return $arrayResponse;
     }
 
-    public function buildTree($composer)
+    function createBranch($composer)
     {
 
         $branch = array();
         foreach ($composer["require"] as $key => $child) {
             $repoIndex = array_search($key, array_column($this->dimensionalElements, 'name'));
+
+            //Evaluamos si es parte de los repositorios locales
             if (in_array($key, $this->inHouseRepos)) {
-                $branch[] = ["name" => $key, "child" => $this->buildTree($this->composerList[$repoIndex])];
+                $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
             }
         }
 
         return $branch;
     }
 
-    public function findReferences()
+    public function findReferences($packageName)
     {
+        $treeArray = $this->createTree();
+        $linkedRepos = ["Hubo un problema para obtener las referencias"];
+
+        if (!empty($treeArray)) {
+
+            //Buscamos en la lista de elementos planos
+            $search = $this->search_by_package_name($packageName, $this->flatElements);
+            if (!is_null($search)) {
+                if (isset($search["parents"]) and !empty($search["parents"])) {
+                    //Comienza la recursividad de padres
+                    $linkedRepos = $this->getPackageParents($search["parents"]);
+                } else {
+                    $linkedRepos = ["No contiene ningún elemento padre"]; //No tiene elementos padre
+                }
+            }
+        }
+
+        return $linkedRepos;
+    }
+
+    function search_by_package_name($name, $array)
+    {
+        foreach ($array as $composerElement) {
+            foreach ($composerElement as $key => $composer_name) {
+                if ($composer_name == $name) {
+                    return $composerElement;
+                }
+            }
+        }
+        return null;
+    }
+
+    function getPackageParents($parents)
+    {
+        $linkedRepos = $parents;
+        foreach ($parents as $element) {
+            $search = $this->search_by_package_name($element, $this->flatElements);
+            if (!is_null($search)) {
+                if (isset($search["parents"]) and !empty($search["parents"])) {
+                    $linkedRepos[] = $this->getPackageParents($search["parents"]);
+                }
+            }
+        }
+
+        return $linkedRepos;
     }
 }
 
 $relacion = new Relacion();
-print_r(json_encode($relacion->getPackageRelation()));
+print_r(json_encode($relacion->findReferences("ampliffy/lib-4")));
