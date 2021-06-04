@@ -1,0 +1,8 @@
+{
+    "name": "ampliffy/lib-1",
+    "autoload": {
+        "psr-4": {
+            "Ampliffy\\Lib-1\\": "src/"
+        }
+    }
+}

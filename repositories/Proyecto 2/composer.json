@@ -1,0 +1,12 @@
+{
+    "name": "ampliffy/proyecto-2",
+    "require": {
+        "ampliffy/lib-2": "1.0",
+        "otra/libreria6": "1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ampliffy\\Proyecto2\\": "src/"
+        }
+    }
+}
