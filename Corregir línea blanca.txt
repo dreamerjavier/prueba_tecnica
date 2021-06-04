@@ -1,0 +1,8 @@
+-- Línea blanca entre el vídeo y el título --
+
+La mejor solución es directamente desde el script donde se carga el video, porque tiene una altura relativa que está calculada con js.
+Pero una manera rápida para arreglarlo es agregar el siguiente atributo css:
+
+.NG_info_img_area {
+    margin-bottom: -1%!important;
+}
