@@ -15,9 +15,12 @@ class Relacion extends Globals
     public $composerList = [];
     public $dimensionalElements = [];
     public $flatElements = [];
+    public bool $onlyLocalRepos;
 
-    function createTree(string $directory = null)
+    function createTree($local = false, string $directory = null)
     {
+        $this->onlyLocalRepos = $local;
+
         $arrayResponse = [];
 
         // Lectura de repositorios
@@ -88,7 +91,7 @@ class Relacion extends Globals
                 }
 
                 if (!empty($this->dimensionalElements)) {
-                    $arrayResponse = $this->flatElements;
+                    $arrayResponse = $this->dimensionalElements;
                 }
             }
         }
@@ -105,7 +108,11 @@ class Relacion extends Globals
             $repoIndex = array_search($key, array_column($this->dimensionalElements, 'name'));
 
             //Evaluamos si es parte de los repositorios locales
-            if (in_array($key, $this->inHouseRepos)) {
+            if ($this->onlyLocalRepos) {
+                if (in_array($key, $this->inHouseRepos)) {
+                    $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
+                }
+            } else {
                 $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
             }
         }
@@ -116,7 +123,7 @@ class Relacion extends Globals
     public function findReferences($packageName)
     {
         $treeArray = $this->createTree();
-        $linkedRepos = ["Hubo un problema para obtener las referencias"];
+        $response = "";
 
         if (!empty($treeArray)) {
 
@@ -132,7 +139,11 @@ class Relacion extends Globals
             }
         }
 
-        return $linkedRepos;
+        $it = new RecursiveIteratorIterator(new RecursiveArrayIterator($linkedRepos));
+        foreach ($it as $v) {
+            $response .= ($v . ", ");
+        }
+        return $response;
     }
 
     function search_by_package_name($name, $array)
@@ -164,4 +175,19 @@ class Relacion extends Globals
 }
 
 $relacion = new Relacion();
-print_r(json_encode($relacion->findReferences("ampliffy/lib-4")));
+if (isset($_GET["repo"])) {
+    print('El repositorio "' . $_GET["repo"] . '" está incluído de manera directa e indirecta en los siguientes repositorios: <br>');
+    print_r(json_encode($relacion->findReferences($_GET["repo"])));
+} else {
+    if (isset($_GET["local"])) {
+        if ($_GET["local"] == "true") {
+            print_r(json_encode($relacion->createTree(true)));
+        } else {
+            print('La estructura de los repositorios es la siguiente: <br>');
+            print_r(json_encode($relacion->createTree()));
+        }
+    } else {
+        print('La estructura de los repositorios es la siguiente: <br>');
+        print_r(json_encode($relacion->createTree()));
+    }
+}
