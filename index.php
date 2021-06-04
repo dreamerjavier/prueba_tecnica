@@ -6,7 +6,16 @@ use Relacion\Relacion;
 $relacion = new Relacion();
 if (isset($_GET["repo"])) {
     print('El repositorio "' . $_GET["repo"] . '" está incluído de manera directa e indirecta en los siguientes repositorios: <br>');
-    print_r(json_encode($relacion->findReferences($_GET["repo"])));
+    $response = $relacion->findReferences($_GET["repo"]);
+    $it = new RecursiveIteratorIterator(new RecursiveArrayIterator($response));
+    foreach ($it as $v) {
+        $simpleResponse .= ($v . ", ");
+    }
+    if (empty($response)) {
+        print("No contiene ningún elemento padre");
+    } else {
+        print_r($simpleResponse);
+    }
 } else {
     if (isset($_GET["local"])) {
         if ($_GET["local"] == "true") {

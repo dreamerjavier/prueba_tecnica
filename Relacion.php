@@ -1,4 +1,5 @@
 <?php
+
 namespace Relacion;
 
 require_once "Globals.php";
@@ -16,7 +17,7 @@ class Relacion extends Globals
     public $flatElements = [];
     public bool $onlyLocalRepos;
 
-    function createTree($local = false, string $directory = null)
+    public function createTree($local = false, string $directory = null)
     {
         $this->onlyLocalRepos = $local;
 
@@ -25,13 +26,14 @@ class Relacion extends Globals
         // Lectura de repositorios
         $directory = is_null($directory) ? $this->getRepoDir() : $directory;
         if (is_dir($this->getRepoDir())) {
-            $scanResult = scandir($this->getRepoDir());
+            //$scanResult = scandir($this->getRepoDir());
+            $scanResult = array_filter(glob($this->getRepoDir() . "/*"), 'is_dir');/* scandir($this->getRepoDir()); */
             if (!empty($scanResult)) {
                 foreach ($scanResult as $result) {
                     if (!pathinfo($result, PATHINFO_EXTENSION)) {
 
                         // Búsqueda de composers
-                        $directoryIteration = new DirectoryIterator($this->getRepoDir() . "/" . $result);
+                        $directoryIteration = new DirectoryIterator($result);
                         if (!empty($directoryIteration)) {
                             foreach ($directoryIteration as $key => $composer_file) {
                                 if (pathinfo($composer_file, PATHINFO_EXTENSION) == 'json') {
@@ -122,7 +124,6 @@ class Relacion extends Globals
     public function findReferences($packageName)
     {
         $treeArray = $this->createTree();
-        $response = "";
 
         if (!empty($treeArray)) {
 
@@ -133,16 +134,11 @@ class Relacion extends Globals
                     //Comienza la recursividad de padres
                     $linkedRepos = $this->getPackageParents($search["parents"]);
                 } else {
-                    $linkedRepos = ["No contiene ningún elemento padre"]; //No tiene elementos padre
+                    $linkedRepos = []; //No tiene elementos padre
                 }
             }
         }
-
-        $it = new RecursiveIteratorIterator(new RecursiveArrayIterator($linkedRepos));
-        foreach ($it as $v) {
-            $response .= ($v . ", ");
-        }
-        return $response;
+        return $linkedRepos;
     }
 
     function search_by_package_name($name, $array)

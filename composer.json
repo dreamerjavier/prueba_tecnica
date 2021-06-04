@@ -1,0 +1,11 @@
+{
+    "require-dev": {
+        "phpunit/phpunit": "^9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ampliffy\\": "/",
+            "Ampliffy\\Tests\\": "tests/"
+        }
+    }
+}

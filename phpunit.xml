@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true" convertNoticesToExceptions="false" convertWarningsToExceptions="false">
+    <testsuites>
+        <testsuite name="Pruebas unitarias Ampliffy">
+            <directory>./tests/</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
