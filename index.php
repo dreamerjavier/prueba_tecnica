@@ -13,6 +13,8 @@ class Relacion extends Globals
 {
     public $inHouseRepos = [];
     public $composerList = [];
+    public $dimensionalElements = [];
+    public $flatElements = [];
 
     public function getPackageRelation($packageName = null)
     {
@@ -25,7 +27,6 @@ class Relacion extends Globals
     public function createTree(string $directory = null)
     {
         $arrayResponse = [];
-        $flatElements = [];
 
         $descendantTree = [];
         $ascendantTree = [];
@@ -38,14 +39,15 @@ class Relacion extends Globals
             if (!empty($scanResult)) {
                 foreach ($scanResult as $result) {
                     if (!pathinfo($result, PATHINFO_EXTENSION)) {
-                        array_push($this->inHouseRepos, $result);
-
                         // Búsqueda de composers
                         $directoryIteration = new DirectoryIterator($this->getRepoDir() . "/" . $result);
                         if (!empty($directoryIteration)) {
                             foreach ($directoryIteration as $key => $composer_file) {
-                                if (pathinfo($composer_file, PATHINFO_EXTENSION) == 'json')
-                                    array_push($this->composerList, json_decode(file_get_contents($composer_file->getRealPath()), true));
+                                if (pathinfo($composer_file, PATHINFO_EXTENSION) == 'json') {
+                                    $json = json_decode(file_get_contents($composer_file->getRealPath()), true);
+                                    array_push($this->composerList, $json);
+                                    array_push($this->inHouseRepos, $json["name"]);
+                                }
                             }
                         }
                     }
@@ -54,12 +56,39 @@ class Relacion extends Globals
 
             if (!empty($this->composerList)) {
                 foreach ($this->composerList as $composer) {
-
-                    $flatElements[] = ["name" => $composer["name"], "child" => $this->buildTree($composer)];
+                    $this->flatElements[] = ["name" => $composer["name"], "child" => array_keys($composer["require"])];
+                    $this->dimensionalElements[] = ["name" => $composer["name"], "child" => $this->buildTree($composer)];
                 }
 
-                if (!empty($flatElements)) {
-                    $arrayResponse = $flatElements;
+                foreach ($this->flatElements as $key => $flatElement) {
+                    foreach ($this->flatElements as $toCompareFlat) {
+                        if (in_array($flatElement["name"], $toCompareFlat["child"])) {
+                            if (!in_array($toCompareFlat["name"], $this->flatElements[$key]["parents"]) and $toCompareFlat["name"] != $flatElement["name"]) {
+                                $this->flatElements[$key]["parents"][] = $toCompareFlat["name"];
+                            }
+                        }
+
+                        $parentKey = array_search($toCompareFlat["name"], array_column($this->flatElements, 'name'));
+                        if (!in_array($toCompareFlat["name"], $this->flatElements[$parentKey]["child"]) and $toCompareFlat["name"] != $this->flatElements[$parentKey]["name"]) {
+                            $this->flatElements[$parentKey]["child"][] = $toCompareFlat["name"];
+                        }
+                    }
+                }
+
+                foreach ($this->flatElements as $element) {
+                    if (isset($element["parents"])) {
+                        $nonMainParentItems[] = $element["name"];
+                    }
+                }
+
+                foreach ($this->dimensionalElements as $key => $element) {
+                    if (in_array($element["name"], $nonMainParentItems)) {
+                        unset($this->dimensionalElements[$key]);
+                    }
+                }
+
+                if (!empty($this->dimensionalElements)) {
+                    $arrayResponse = $this->dimensionalElements;
                 }
             }
         }
@@ -73,11 +102,17 @@ class Relacion extends Globals
 
         $branch = array();
         foreach ($composer["require"] as $key => $child) {
-            $repoIndex = array_search($key, array_column($this->composerList, 'name'));
-            $branch[] = ["name" => $key, "child" => $this->buildTree($this->composerList[$repoIndex])];
+            $repoIndex = array_search($key, array_column($this->dimensionalElements, 'name'));
+            if (in_array($key, $this->inHouseRepos)) {
+                $branch[] = ["name" => $key, "child" => $this->buildTree($this->composerList[$repoIndex])];
+            }
         }
 
         return $branch;
+    }
+
+    public function findReferences()
+    {
     }
 }
 
