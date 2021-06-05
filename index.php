@@ -19,6 +19,7 @@ if (isset($_GET["repo"])) {
 } else {
     if (isset($_GET["local"])) {
         if ($_GET["local"] == "true") {
+            print('La estructura de los repositorios locales es la siguiente: <br>');
             print_r(json_encode($relacion->createTree(true)));
         } else {
             print('La estructura de los repositorios es la siguiente: <br>');
