@@ -29,6 +29,12 @@ class RelacionTest extends TestCase
         $this->assertEquals($json, json_encode($respuesta));
     }
 
+    public function testCreateTreeWithGivenDirectory()
+    {
+        $respuesta = $this->Relacion->createTree(false, "different_dir");
+        $this->assertEmpty($respuesta);
+    }
+
     /**
      * @dataProvider repoNameDataProviderWithParents
      */

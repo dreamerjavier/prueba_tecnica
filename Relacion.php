@@ -25,9 +25,9 @@ class Relacion extends Globals
 
         // Lectura de repositorios
         $directory = is_null($directory) ? $this->getRepoDir() : $directory;
-        if (is_dir($this->getRepoDir())) {
+        if (is_dir($directory)) {
             //$scanResult = scandir($this->getRepoDir());
-            $scanResult = array_filter(glob($this->getRepoDir() . "/*"), 'is_dir');/* scandir($this->getRepoDir()); */
+            $scanResult = array_filter(glob($directory . "/*"), 'is_dir');/* scandir($this->getRepoDir()); */
             if (!empty($scanResult)) {
                 foreach ($scanResult as $result) {
                     if (!pathinfo($result, PATHINFO_EXTENSION)) {
