@@ -6,8 +6,6 @@ require_once "Globals.php";
 
 use DirectoryIterator;
 use Globals\Globals as Globals;
-use RecursiveArrayIterator;
-use RecursiveIteratorIterator;
 
 class Relacion extends Globals
 {
@@ -26,8 +24,7 @@ class Relacion extends Globals
         // Lectura de repositorios
         $directory = is_null($directory) ? $this->getRepoDir() : $directory;
         if (is_dir($directory)) {
-            //$scanResult = scandir($this->getRepoDir());
-            $scanResult = array_filter(glob($directory . "/*"), 'is_dir');/* scandir($this->getRepoDir()); */
+            $scanResult = array_filter(glob($directory . "/*"), 'is_dir');
             if (!empty($scanResult)) {
                 foreach ($scanResult as $result) {
                     if (!pathinfo($result, PATHINFO_EXTENSION)) {
@@ -51,7 +48,8 @@ class Relacion extends Globals
             if (!empty($this->composerList)) {
                 foreach ($this->composerList as $composer) {
                     // Utilizamos la lista flat para tener todos los elementos en una lista lineal para poder comparar más tarde
-                    $this->flatElements[] = ["name" => $composer["name"], "child" => array_keys($composer["require"])];
+                    $requiredChildren = $composer["require"] ?? [];
+                    $this->flatElements[] = ["name" => $composer["name"], "child" => (array_keys($requiredChildren))];
 
                     //Aquí se crea el árbol de dependencias
                     $this->dimensionalElements[] = ["name" => $composer["name"], "child" => $this->createBranch($composer)];
@@ -63,7 +61,8 @@ class Relacion extends Globals
 
                         //Evaluamos si tiene padres
                         if (in_array($flatElement["name"], $toCompareFlat["child"])) {
-                            if (!in_array($toCompareFlat["name"], $this->flatElements[$key]["parents"]) and $toCompareFlat["name"] != $flatElement["name"]) {
+                            $parents = $this->flatElements[$key]["parents"] ?? [];
+                            if (!in_array($toCompareFlat["name"], $parents) and $toCompareFlat["name"] != $flatElement["name"]) {
                                 $this->flatElements[$key]["parents"][] = $toCompareFlat["name"];
                             }
                         }
@@ -105,16 +104,19 @@ class Relacion extends Globals
     {
 
         $branch = array();
-        foreach ($composer["require"] as $key => $child) {
-            $repoIndex = array_search($key, array_column($this->dimensionalElements, 'name'));
+        $requiredChildren = $composer["require"] ?? [];
+        if (!is_null($requiredChildren)) {
+            foreach ($requiredChildren as $key => $child) {
+                $repoIndex = array_search($key, array_column($this->dimensionalElements, 'name'));
 
-            //Evaluamos si es parte de los repositorios locales
-            if ($this->onlyLocalRepos) {
-                if (in_array($key, $this->inHouseRepos)) {
+                //Evaluamos si es parte de los repositorios locales
+                if ($this->onlyLocalRepos) {
+                    if (in_array($key, $this->inHouseRepos)) {
+                        $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
+                    }
+                } else {
                     $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
                 }
-            } else {
-                $branch[] = ["name" => $key, "child" => $this->createBranch($this->composerList[$repoIndex])];
             }
         }
 
