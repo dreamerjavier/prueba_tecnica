@@ -9,8 +9,6 @@ function spotTarget() {
             setNewVidSize();
             evenCounter++;
         } else {
-            console.log("Counter: "+evenCounter);
-            console.log(evenCounter % 2);
             evenCounter++;
         }
 
@@ -23,9 +21,7 @@ function spotTarget() {
 function setNewVidSize() {
     var vidParentHeight = $("#vid-695094266").outerWidth();
     var vidChildElement = $("#" + targetDivAmpliffyID);
-    console.log(vidParentHeight);
     var newVidChildClass = vidChildElement.attr("class").replace(/height-.*-/, 'height-' + ((Math.round(vidParentHeight * 0.57)) + 5) + '-');
-    console.log(newVidChildClass);
     vidChildElement.attr("class", newVidChildClass);
 }
 
