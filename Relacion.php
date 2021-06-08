@@ -126,6 +126,7 @@ class Relacion extends Globals
     public function findReferences($packageName)
     {
         $treeArray = $this->createTree();
+        $linkedRepos = [];
 
         if (!empty($treeArray)) {
 
